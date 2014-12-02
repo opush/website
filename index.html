@@ -1,0 +1,225 @@
+<html>
+	<head>
+		<title>opush - open push</title>
+		<style>
+			.border
+			{
+				border: 1px solid black;
+			}
+			.left
+			{
+				background-color: blue;
+			}
+
+			.right
+			{
+				background-color: purple;
+				text-align: right;
+			}
+			.timegoesby
+			{
+				background-color: gray;
+				text-align: center;
+			}
+		</style>
+	</head>
+
+	<body>
+		<h1>opush - open push</h1>
+		<div>The opush will be soon a open and secure push service. The need for this push service I see because I'm begin to port TextSecure to SailfishOS. Push systems are necessary nowadays because the most devices have only private ip addresses behind a NAT, if it is behind a DSL-Router, Kabel-Router or even on wireless GPRS/EDGE/3G/LTE the most users have only private ip's behind NAT. Apple have <i>Apple Push Notification Service</i>, Google have <i>Google Cloud Messaging</i> and Microsoft Messenger have <i>Microsoft Notification Protocol</i> but what's about SailfishOS, Nemo, Plasma Active, CyanogenMod - well right CyanogenMod has wisperpush for their TextSecure implementation. This could also be the way for the TextSecure implementation for SailfishOS.<br/>
+But I think it's a bad idea to implement for every messenger application an own push service.
+<b>Why it's a bad idea to use an own push system for every app?</b>
+<ul>
+	<li>More apps or daemons have to run on the device, more battery drain</li>
+	<li>Every messenger application needs to invent the wheel once more</li>
+	<li>The focus would be on make it work fast (mostly quick'n'dirty) - because it's not the push system which would be the focus of the developer</li>
+</ul><br/>
+<b>And what would be the benefits of a open push service?</b>
+<ul>
+	<li>Reusable for every Application on every system</li>
+	<li>Easy end-to-end encryption by default without an app developer needs to care about</li>
+	<li>Possibility to use different server to support push service, e.g. Jolla would have one, Plasma Active could have one, Nemo could have one or they would only decide to use opush.net which is already planned for a reference implementation</li>
+	<li>Because all data will be encrypted collection metadata will be harder when a lot of different data goes through the push connections</li>
+	<li>You don't need to trust the push servers because they have no knowledge about the content of the message, even no knowledge for which app the notification is</li>
+	<li>Not only messenger apps could use that push service</li>
+</ul>
+<b>And what's about disadventages of this kind of open push service?</b>
+<ul>
+	<li>Push server will have a bigger load through verifying the signatures</li>
+	<li>App server will have a higher load because of encryption</li>
+	<li>App server may have a higher load because the app server may need maintain a tcp stream open for varios push servers</li>
+	<li>The opush daemon(on the device) will have a higher load by checking the signature of the message</li>
+	<li>The app will have a higher load because of decryption</li>
+</ul>
+		</div>
+		<div>
+<h2>How I imagine it should work:</h2>
+
+All connections between opush daemon and opush server will be encrypted by TLS. Also all connection between application server will be encrypted by TLS.
+All crypto stuff must be done through opush-lib to keep it easy for the developers of the app. It's very important to keep it simple, so that developer don't even think to implement something own less secure. Internally should be strongly used well known libraries like crypto++ instead of writing own crypto stuff.
+
+<table>
+	<tr>
+		<th>App</th>
+		<th>&nbsp;</th>
+		<th>opush daemon on the device</th>
+		<th>&nbsp;</th>
+		<th>opush server</th>
+		<th>&nbsp;</th>
+		<th>application server</th>
+	<tr>
+
+	<tr>
+		<td colspan="6">&nbsp;</td>
+		<td class="border">Create private&amp;public key pair if not already exists by help of opush-lib</td>
+	<tr>
+		<td class="border">If there is no public&amp;private key pair for the app, create a new pair easily with help of the opush-lib.</td>
+		<td colspan="6">&nbsp;</td>
+	</tr>
+
+	<tr>
+		<td>ask push daemon for the push id and for the app id by using the sha256(public key) as indentifier</td>
+		<td class="right">&gt;&gt;&gt;</td>
+		<td colspan="5">&nbsp;</td>
+	<tr>
+
+	<tr>
+		<td>&nbsp;</td>
+		<td class="left">&lt;&lt;&lt;</td>
+		<td>Answer push id and app id, something like aht3ce@openpush.net/3</td>
+		<td colspan="4">&nbsp;</td>
+	</tr>
+
+	<tr>
+		<td>Connect</td>
+		<td class="right" colspan="5">&gt;&gt;&gt;</td>
+		<td>&nbsp;</td>
+	<tr>
+
+	<tr>
+		<td>&nbsp;</td>
+		<td class="left" colspan="5">&lt;&lt;&lt;</td>
+		<td>send public key and FQDN from app server</td>
+	</tr>
+
+	<tr>
+		<td>put app server key and FQDN to push daemon</td>
+		<td class="right">&gt;&gt;&gt;</td>
+		<td colspan="5">&nbsp;</td>
+	<tr>
+
+	<tr>
+		<td colspan="2">&nbsp;</td>
+		<td>push whitelisting for FQDN&amp;app server signature for this push id</td>
+		<td class="right">&gt;&gt;&gt;</td>
+		<td colspan="4">&nbsp;</td>
+	</tr>
+
+	<tr>
+		<td>&nbsp;</td>
+		<td class="left" colspan="5">&lt;&lt;&lt;</td>
+		<td>ask for push id, public key of the push daemon and public key of the app</td>
+	</tr>
+
+	<tr>
+		<td>ask push daemon for the public key of the push daemon</td>
+		<td class="right">&gt;&gt;&gt;</td>
+		<td colspan="5">&nbsp;</td>
+	<tr>
+
+	<tr>
+		<td>&nbsp;</td>
+		<td class="left">&lt;&lt;&lt;</td>
+		<td>Answer the public key of the daemon</td>
+		<td colspan="4">&nbsp;</td>
+	</tr>
+
+	<tr>
+		<td>send {push id}/{app id} and public keys of app and push daemon</td>
+		<td class="right" colspan="5">&gt;&gt;&gt;</td>
+		<td>&nbsp;</td>
+	</tr>
+
+	<tr>
+		<td class="timegoesby" colspan="7">time goes by</td>
+	</tr>
+
+	<tr>
+		<td colspan="6">&nbsp;</td>
+		<td class="border">Need to push a message: Encrypt message with the public key of the app.
+Sign the message with the private key of the app server.
+Encrypt the signature with the app id with the public key of the push daemon.
+Take a timestamp syncronized with a ntp-server and create a signature over push id &amp; timestamp with the private key of the app server.
+The package look then like that: <br/><div style="background-color: red;">{plaintext[app server FQDN][push id(aht3ce@opush.net)][timestamp][signature of push id &amp; timestamp]}</div><div style="background-color: green;">{encrypted for daemon[app id(3)][signature of the message]}</div><div style="background-color: cyan;">{encrypted for app[message]}</div></td>
+	</tr>
+
+	<tr>
+		<td colspan="5">&nbsp;</td>
+		<td class="left">&lt;&lt;&lt;</td>
+		<td>Send the package to the push server, openpush.net </td>
+	</tr>
+
+	<tr>
+		<td colspan="4">&nbsp;</td>
+		<td class="border"><div>If timestamp older then 60sec =&gt; discard package</div>
+<div>If FQDN of app server not whitelisted for push id =&gt; discard package</div>
+<div>If signature over push id &amp; timestamp wrong =&gt; discard package</div><div>stripe unencrypted part from the package because it's no more necessary.</div></td>
+		<td colspan="2">&nbsp;</td>
+	</tr>
+	
+	<tr>
+		<td colspan="3">&nbsp;</td>
+		<td class="left">&lt;&lt;&lt;</td>
+		<td>push the package to the daemon</td>
+		<td colspan="2">&nbsp;</td>
+	</tr>
+
+	<tr>
+		<td colspan=2">&nbsp;</td>
+		<td class="border"><div>Decrypt the first part of the package with the private key of the daemon, if not possible=&gt;discard</div>
+<div>Look up the public key of application server by app id</div>
+<div>Test signature of the message, if wrong =&gt; discard package</div>
+<div>If app is not running anymore, start app with the argument <b>push</b></td>
+		<td colspan="4">&nbsp;</td>
+	</tr>
+
+	<tr>
+		<td>&nbsp;</td>
+		<td class="left">&lt;&lt;&lt;</td>
+		<td>push package to the app if app was still running otherwise store the message for the app</td>
+		<td colspan="4">&nbsp;</td>
+	</tr>
+
+	<tr>
+		<td class="border">If app starts new with the argument <b>push</b>, pull the new message(s)</td>
+		<td colspan="6">&nbsp;</td>
+	</tr>
+
+</table>
+		</div>
+		<div>
+<h2>What is to do?</h2>
+<ul>
+	<li>documentation (very important for the success)</li>
+	<li>client library<br/>at least in
+	<ul>
+		<li>c++/qt</li>
+		<li>python</li>
+	</ul>
+	</li>
+	<li>opush daemon (running on the app device)</li>
+	<li>opush server implementation</li>
+	<li>app server library<br/>may be in
+	<ul>
+		<li>c/c++</li>
+		<li>python</li>
+		<li>php</li>
+		<li>java</li>
+	</ul>
+	</li>
+	<li>Try to intigrate the stuff in the mer-project</li>
+</ul>
+		</div>
+<strong>Still it's only a draft. In the next days I will set up tools for colaboration and after that I will start with the implementation, probably first in python as proof of concept. If you like contribute or only give any feedback you can reach me by <a href="mailto:opush@thorstenkaiser.de">email</a>.</strong>
+	</body>
+</html>
